@@ -6,7 +6,7 @@ Playwright runs a real browser, so it can handle:
 - Complex interactions
 """
 
-from playwright.async_api import async_playright
+from playwright.async_api import async_playwright
 import asyncio
 from bs4 import BeautifulSoup
 from typing import Dict, Optional
@@ -26,7 +26,7 @@ class PlaywrightScraper:
             wait_for: CSS selector to wait for (for dynamic content)
         """
 
-        async with async_playright() as p:
+        async with async_playwright() as p:
             
             browser = await p.chromium.launch(headless = True)
             page = await browser.new_page()
@@ -43,7 +43,7 @@ class PlaywrightScraper:
 
                 soup = BeautifulSoup(content, 'html.parser')
 
-                for script in soup["script", "style"]:
+                for script in soup.find_all(["script", "style"]):
                     script.decompose()
 
                 text = soup.get_text()
@@ -70,3 +70,7 @@ class PlaywrightScraper:
                 await browser.close()
 
             return result
+
+    def scrape(self, url: str, wait_for: Optional[str] = None):
+        #Synchronous wrapper for async scrape
+        return asyncio.run(self.scrape_page(url, wait_for))

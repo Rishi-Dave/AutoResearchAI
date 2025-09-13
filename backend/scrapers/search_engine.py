@@ -4,9 +4,12 @@ This is our starting point for finding information
 """
 
 import os
-from serpapi import GoogleSearch
+from serpapi import Client
 from typing import List, Dict
 from datetime import datetime
+from dotenv import load_dotenv
+
+load_dotenv()
 
 class SearchEngine:
     """
@@ -21,6 +24,7 @@ class SearchEngine:
         self.api_key = os.getenv("SERPAPI_KEY")
         if not self.api_key:
             raise ValueError("SERPAPI_KEY not found")
+        self.client = Client(api_key=self.api_key)
         
 
     def search(self, query: str, num_results: int = 10) -> List[Dict]:
@@ -37,22 +41,19 @@ class SearchEngine:
 
         params = {
             "q": query,
-            "api_key": self.api_key,
             "num": num_results,
             "engine": "google"
         }
 
-        search = GoogleSearch(params)
-        results = search.get_dict()
+        results = self.client.search(params)
 
         parsed_results = []
         for result in results.get("organic_results", []):
             parsed_results.append({
                 "title": result.get("title"),
                 "link": result.get("link"),
-                "snipper": result.get("snippet"),
+                "snippet": result.get("snippet"),
                 "date_retrieved": datetime.now().isoformat()
             })
 
-
-            return parsed_results
+        return parsed_results
