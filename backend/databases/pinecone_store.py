@@ -1,8 +1,8 @@
-import pinecone
 import os
 from dotenv import load_dotenv
 from typing import List, Dict, Any
-from langchain.vectorstores import Pinecone
+from pinecone import Pinecone, ServerlessSpec
+from langchain_pinecone import PineconeVectorStore
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 class PineconeStore:
@@ -24,31 +24,33 @@ class PineconeStore:
         """
 
         self.embeddings = embeddings
-
-        #initialize pinecone with library
-        pinecone.init(
-            api_key = os.getenv("PINECONE_API_KEY"),
-            environment = os.getenv("PINECONE_ENV")
-        )
-
         self.index_name = "research-assistant"
 
-        #Create index if it doesn't exist
-        if self.index_name not in pinecone.list_indexes():
-            pinecone.create_index(
-                name = self.index_name,
-                dimension=1538,
-                metri = "cosine"
+        # Initialize Pinecone client (v3+ API)
+        self.pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
+
+        # Create index if it doesn't exist
+        if self.index_name not in self.pc.list_indexes().names():
+            self.pc.create_index(
+                name=self.index_name,
+                dimension=1536,  # OpenAI embeddings dimension
+                metric="cosine",
+                spec=ServerlessSpec(
+                    cloud="aws",
+                    region="us-east-1"  # Free tier supported region
+                )
             )
 
-
-        self.index = pinecone.Index(self.index_name)
-        self.vectorstore = Pinecone(self.index, self.embeddings, "text")
+        # Initialize LangChain vectorstore with newer langchain-pinecone
+        self.vectorstore = PineconeVectorStore(
+            index_name=self.index_name,
+            embedding=self.embeddings
+        )
 
         self.text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=1000,
             chunk_overlap=200,
-            seperators=["\n\n", "\n", ". ", " ", ""]
+            separators=["\n\n", "\n", ". ", " ", ""]
         )
 
     def add_documents(self, documents: List[Dict]) -> List[str]:
@@ -108,4 +110,6 @@ class PineconeStore:
     
     def delete_all(self):
         """Clear all vectors from index"""
-        self.index.delete(delete_all=True)
+        # Get index reference and delete all vectors
+        index = self.pc.Index(name=self.index_name)
+        index.delete(delete_all=True)

@@ -8,6 +8,7 @@ Best for:
 
 import scrapy
 from scrapy.crawler import CrawlerProcess
+from scrapy import signals
 from typing import List, Dict
 import json
 
@@ -77,7 +78,7 @@ class ScrapyRunner:
         def crawler_results(signal, sender, item, response, spider):
             results.append(item)
 
-        from scrapy import signals
+        
         process.crawl(ResearchSpider, urls=urls)
         
         # Connect to the item_scraped signal to collect results
